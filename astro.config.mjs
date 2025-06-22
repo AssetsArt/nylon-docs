@@ -10,10 +10,6 @@ export default defineConfig({
 			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/AssetsArt/nylon' }],
 			sidebar: [
 				{
-					label: 'Introduction',
-					slug: 'introduction',
-				},
-				{
 					label: 'Getting Started',
 					items: [
 						{ label: 'Installation', slug: 'getting-started/installation' },
