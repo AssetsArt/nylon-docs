@@ -5,14 +5,13 @@ description: Overview of Nylon — the extensible, high-performance proxy server
 
 import Footer from './../../components/footer.mdx';
 
-# Why Choose Nylon?
+**Nylon** is a lightweight, high-performance, and extensible proxy server built on top of the robust [Cloudflare Pingora](https://blog.cloudflare.com/introducing-pingora/) framework. Designed for modern infrastructure.
 
-**Nylon** is a next-generation proxy server and API gateway built for speed, extensibility, and real-world developer needs.
-
-- **Lightning-fast.** Built on [Cloudflare Pingora](https://github.com/cloudflare/pingora), proven in global-scale production.
-- **True extensibility.** Write plugins in Go, Rust, Zig, C — via FlatBuffers + ultra-fast FFI.
-- **One YAML to rule them all.** Configure routes, plugins, TLS, and load balancing in a single, GitOps-friendly config.
-- **Built for the cloud-native era.** Scale to millions of requests with full observability and reliability.
+- **Extensible**: Write plugins in Go, Rust, Zig, C, and more. Extend routing, filtering, and business logic without patching the core.
+- **Modern Configuration**: Manage everything with a single, declarative YAML file. GitOps-friendly.
+- **Advanced Routing & Load Balancing**: Route by host, header, path (wildcard support), and balance traffic with round robin, random, or consistent hashing.
+- **Automatic TLS Management**: ACME (Let's Encrypt, Buypass, etc.) and custom certs supported.
+- **Cloud-Native**: Designed for scale, reliability, and observability.
 
 > 🚀 **See real-world plugins:**  
 > [Nylon Go Plugin Examples →](https://github.com/AssetsArt/nylon/tree/main/examples/go)
