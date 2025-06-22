@@ -44,6 +44,12 @@ export default defineConfig({
                         // { label: 'C SDK', slug: 'plugin-system/c' },
                     ],
                 },
+                {
+                    label: 'Nylon by Example',
+                    items: [
+                        { label: 'Ticketing Service', slug: 'nylon-by-example/ticketing-service' },
+                    ],
+                }
             ],
         }),
     ],
