@@ -1,0 +1,109 @@
+---
+title: "Overview"
+description: Overview of Nylon — the extensible, high-performance proxy server.
+---
+
+import Footer from './../../components/footer.mdx';
+
+# Why Choose Nylon?
+
+**Nylon** is a next-generation proxy server and API gateway built for speed, extensibility, and real-world developer needs.
+
+- **Lightning-fast.** Built on [Cloudflare Pingora](https://github.com/cloudflare/pingora), proven in global-scale production.
+- **True extensibility.** Write plugins in Go, Rust, Zig, C — via FlatBuffers + ultra-fast FFI.
+- **One YAML to rule them all.** Configure routes, plugins, TLS, and load balancing in a single, GitOps-friendly config.
+- **Built for the cloud-native era.** Scale to millions of requests with full observability and reliability.
+
+> 🚀 **See real-world plugins:**  
+> [Nylon Go Plugin Examples →](https://github.com/AssetsArt/nylon/tree/main/examples/go)
+
+---
+
+# Extensible by Design
+
+Add or customize functionality **without forking or patching Nylon core** — just write a plugin!
+
+```go
+// Go Example: Minimal Middleware Plugin
+
+//export sdk_go_mid_request_filter
+func sdk_go_mid_request_filter(ptr *C.uchar, input_len C.int) C.FfiOutput {
+    dispatcher := InputToDispatcher(ptr, input_len)
+    ctx := dispatcher.SwitchDataToHttpContext()
+    ctx.Request.SetHeader("x-nylon-middleware", "true")
+    dispatcher.SetHttpEnd(false)
+    dispatcher.SetData(ctx.ToBytes())
+    return SendResponse(dispatcher)
+}
+```
+
+* **Language-agnostic plugins:** Go, Rust, Zig, C, and more
+* **Zero vendor lock-in**
+* **Fastest possible bridge:** All plugin calls use FlatBuffers over native FFI
+
+👉 **Want to build your own?**
+Read the [Plugin System](/plugin-system)
+
+---
+### How Nylon Works
+
+Nylon is built on top of [Cloudflare Pingora](https://github.com/cloudflare/pingora), a battle-tested proxy engine designed for performance, reliability, and security at global scale. Nylon leverages Pingora’s ultra-efficient core to handle connection pooling, IO, and low-level protocol work—**but adds a powerful plugin system and flexible routing engine to make advanced customization possible for everyone.**
+
+**Core Request Flow:**
+- Every client request first enters the Pingora core, which provides efficient networking and connection management.
+- Nylon’s request lifecycle then takes over, processing each request through a chain of routing, plugin filters, and dynamic service logic—**all configurable and extensible via plugins written in your language of choice.**
+- At each stage, you can hook in custom logic (plugins), modify requests or responses, and control routing or service behavior without touching the core.
+
+The diagram below illustrates a typical request lifecycle in Nylon:
+
+```mermaid
+graph TD;
+    start("new request")-->early_request_filter;
+    early_request_filter-->request_filter;
+
+    request_filter --> nylon_routing{{Nylon: Routing}};
+    nylon_routing --> req_filter{{Nylon: Request Filter Plugin}};
+    req_filter -- HttpEnd(true) --> response_filter;
+    req_filter -- HttpEnd(false) --> upstream_peer;
+    nylon_routing --> upstream_peer;
+
+    upstream_peer-->Connect{{IO: connect to upstream}};
+    Connect--connection success-->connected_to_upstream;
+    Connect--connection failure-->fail_to_connect;
+    connected_to_upstream-->upstream_request_filter;
+    upstream_request_filter --> request_body_filter;
+    request_body_filter --> SendReq{{IO: send request to upstream}};
+    SendReq-->RecvResp{{IO: read response from upstream}};
+    RecvResp-->upstream_response_filter;
+    upstream_response_filter-->response_filter;
+
+    response_filter --> res_filter{{Nylon: Response Filter Plugin}};
+    res_filter --> response_body_filter;
+    response_body_filter --> res_body_filter{{Nylon: Response Body Filter Plugin}};
+    res_body_filter --> logging;
+    logging --> logging_plugin{{Nylon: Logging Plugin}};
+    logging_plugin --> endreq("request done");
+    
+    response_filter-->upstream_response_body_filter;
+    upstream_response_body_filter-->response_body_filter;
+    response_body_filter-->logging-->endreq("request done");
+    fail_to_connect --can retry-->upstream_peer;
+    fail_to_connect --can't retry-->fail_to_proxy--send error response-->logging;
+    RecvResp--failure-->IOFailure;
+    SendReq--failure-->IOFailure;
+    error_while_proxy--can retry-->upstream_peer;
+    error_while_proxy--can't retry-->fail_to_proxy;
+    request_filter --send response-->logging;
+    Error>any response filter error]-->error_while_proxy;
+    IOFailure>IO error]-->error_while_proxy;
+```
+---
+
+# Learn More
+
+* **Getting Started:** [Quick installation guide →](/getting-started/installation)
+* **Configuration Reference:** [Full YAML config guide →](/getting-started/config)
+
+---
+
+<Footer />

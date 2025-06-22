@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Not yet implemented
+echo "Not yet implemented"
+
+
+# End of file
+exit 0

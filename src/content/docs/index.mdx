@@ -1,5 +1,5 @@
 ---
-title: Nylon
+title: Nylon - The Extensible Proxy Server
 description: Get started with Nylon, a high-performance, extensible proxy server.
 template: splash
 hero:
@@ -10,13 +10,14 @@ hero:
     - text: Get Started
       link: /getting-started/installation
       icon: right-arrow
-    # - text: Read the Nylon docs
-    #   link: https://nylon.sh/docs/getting-started/installation
-    #   icon: external
-    #   variant: minimal
+    - text: Read the Nylon docs
+      link: /overview
+      icon: external
+      variant: minimal
 ---
 import { Card, CardGrid } from '@astrojs/starlight/components';
 import InstallBlock from './../../components/InstallBlock.mdx';
+import Footer from './../../components/footer.mdx';
 
 <div class="lp-cta-card">
   <Card title="Install Nylon" icon="rocket">
@@ -45,142 +46,4 @@ import InstallBlock from './../../components/InstallBlock.mdx';
   </Card>
 </CardGrid>
 
-# Extending Nylon with the Go SDK
-
-Nylon is designed to be extensible through a powerful plugin system. This page provides examples of how to write basic plugins using the Go SDK.
-
-### Core Concepts
-
-Writing a Nylon plugin with the Go SDK involves a few key functions and objects:
-
-* **`InputToDispatcher`**: This function deserializes the raw data pointer passed from Nylon into a manageable `Dispatcher` object.
-* **`Dispatcher`**: The central hub for your plugin. It provides access to the request/response context, plugin configuration, and methods to control the request lifecycle.
-* **`HttpContext`**: An object containing all data for the current HTTP request and response. You can modify headers, the body, and the status code via this context.
-* **`SetHttpEnd`**: A critical method on the `Dispatcher` that tells Nylon whether to terminate the request at this plugin or continue processing.
-    * `true`: End the request and immediately send the response from this plugin back to the client. Ideal for Service Handlers.
-    * `false`: Continue processing the request through the proxy chain. Ideal for Middleware.
-* **`SendResponse`**: The final function called to serialize your plugin's output and return it to Nylon.
-
-### Helper Function Definitions
-
-The following helper functions manage the data conversion between Go and Nylon's C-based FFI layer. You will use these in your plugin's entrypoint functions.
-
-```C
-// nylon.h
-#ifndef NYLON_H
-#define NYLON_H
-
-#include <stdlib.h>
-
-typedef struct {
-    const unsigned char *ptr;
-    unsigned long len;
-} FfiOutput;
-
-#endif // NYLON_H
-```
-
-```go
-// utils.go
-package main
-
-/*
-#include "../../c/nylon.h"
-*/
-import "C"
-import (
-  "unsafe"
-
-  "github.com/AssetsArt/nylon/sdk/go/sdk"
-)
-
-// SendResponse serializes the final Dispatcher object from Go back to a C pointer
-// that Nylon can understand.
-func SendResponse(sdk_dispatcher *sdk.Dispatcher) C.FfiOutput {
-  output := sdk_dispatcher.ToBytes()
-  return C.FfiOutput{
-    ptr: (*C.uchar)(C.CBytes(output)),
-    len: C.ulong(len(output)),
-  }
-}
-
-// InputToDispatcher converts the C pointer and length from Nylon into a Go-native
-// Dispatcher object for easy manipulation.
-func InputToDispatcher(ptr *C.uchar, input_len C.int) *sdk.Dispatcher {
-  input := C.GoBytes(unsafe.Pointer(ptr), C.int(input_len))
-  dispatcher := sdk.WrapDispatcher(input)
-  return dispatcher
-}
-```
-
-The following examples show these concepts in action.
-
-## Example 1: Middleware Plugin
-
-A middleware plugin intercepts and modifies a request or response before it reaches its final destination. This example demonstrates how to add custom headers.
-
-```go
-//export sdk_go_mid_request_filter
-func sdk_go_mid_request_filter(ptr *C.uchar, input_len C.int) C.FfiOutput {
-    // 1. Convert raw input to a Dispatcher object.
-    dispatcher := InputToDispatcher(ptr, input_len)
-    // 2. Get the current HTTP context.
-    ctx := dispatcher.SwitchDataToHttpContext()
-
-    // 3. Modify the request and response headers.
-    ctx.Request.SetHeader("x-nylon-middleware", "true")
-    ctx.Response.SetHeader("x-nylon-request-filter", "true")
-
-    // 4. Tell Nylon to continue processing the request.
-    dispatcher.SetHttpEnd(false)
-    // 5. Serialize the modified context back to bytes.
-    dispatcher.SetData(ctx.ToBytes())
-    // 6. Send the result back to Nylon.
-    return SendResponse(dispatcher)
-}
-````
-
-**Code Breakdown:**
-
-  * `ctx.Request.SetHeader(...)`: Adds a custom header to the request before it's proxied to the backend service.
-  * `ctx.Response.SetHeader(...)`: Adds a custom header to the response before it's sent back to the client.
-  * `dispatcher.SetHttpEnd(false)`: This is the key instruction that defines this plugin as middleware. It tells Nylon not to terminate the request here, but to proceed to the next stage (e.g., the backend service).
-
-## Example 2: Service Handler Plugin
-
-A service handler acts as the final destination for a request. It generates a response directly and sends it back to the client without proxying to another backend.
-
-```go
-//export sdk_go_service
-func sdk_go_service(ptr *C.uchar, input_len C.int) C.FfiOutput {
-    // 1. Convert raw input to a Dispatcher object.
-    dispatcher := InputToDispatcher(ptr, input_len)
-    // 2. Get the current HTTP context.
-    ctx := dispatcher.SwitchDataToHttpContext()
-
-    // 3. Generate a new JSON response body.
-    ctx.Response.BodyJSON(map[string]any{
-        "request_id":  dispatcher.RequestId,
-        "plugin_name": dispatcher.PluginName,
-    })
-    // 4. Set the response headers and status code.
-    ctx.Response.SetHeader("x-nylon-service", "true")
-    ctx.Response.SetStatusCode(200)
-
-    // 5. Tell Nylon to end the request here and send this response.
-    dispatcher.SetHttpEnd(true)
-    // 6. Serialize the new context back to bytes.
-    dispatcher.SetData(ctx.ToBytes())
-    // 7. Send the result back to Nylon.
-    return SendResponse(dispatcher)
-}
-```
-
-**Code Breakdown:**
-
-  * `ctx.Response.BodyJSON(...)`: Creates a new response body from a Go map, automatically setting the `Content-Type` to `application/json`.
-  * `dispatcher.SetHttpEnd(true)`: This critical instruction defines the plugin as a service handler. It tells Nylon that the request lifecycle is complete and that this generated response should be sent directly to the client.
-
-### Next Steps
-
-For complete, runnable implementations and their corresponding configurations, please see the [Go examples directory](https://github.com/AssetsArt/nylon/tree/main/examples/go) in our repository.
+<Footer />
