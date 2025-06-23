@@ -105,6 +105,15 @@ func InputToDispatcher(ptr *C.uchar, input_len C.int) *sdk.Dispatcher {
 	return dispatcher
 }
 
+/*
+This function is used to free the memory allocated by the plugin.
+It is called by the Nylon runtime.
+*/
+//export plugin_free
+func plugin_free(ptr *C.uchar) {
+	C.free(unsafe.Pointer(ptr))
+}
+
 //export create_ticket
 func create_ticket(ptr *C.uchar, input_len C.int) C.FfiOutput {
 	dispatcher := InputToDispatcher(ptr, input_len)
