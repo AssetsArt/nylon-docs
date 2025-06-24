@@ -61,10 +61,10 @@ graph TD;
     early_request_filter-->request_filter;
 
     request_filter --> nylon_routing{{Nylon: Routing}};
-    nylon_routing --> req_filter{{Nylon: Request Filter Plugin}};
+    nylon_routing -- Plugins(true) --> req_filter{{Nylon: Request Filter Plugin}};
+    nylon_routing -- Plugins(false) --> upstream_peer;
     req_filter -- HttpEnd(true) --> response_filter;
     req_filter -- HttpEnd(false) --> upstream_peer;
-    nylon_routing --> upstream_peer;
 
     upstream_peer-->Connect{{IO: connect to upstream}};
     Connect--connection success-->connected_to_upstream;
@@ -76,16 +76,16 @@ graph TD;
     RecvResp-->upstream_response_filter;
     upstream_response_filter-->response_filter;
 
-    response_filter --> res_filter{{Nylon: Response Filter Plugin}};
+    response_filter -- Plugins(true) --> res_filter{{Nylon: Response Filter Plugin}};
+    response_filter -- Plugins(false) --> upstream_response_body_filter;
     res_filter --> response_body_filter;
-    response_body_filter --> res_body_filter{{Nylon: Response Body Filter Plugin}};
+    response_body_filter -- Plugins(true) --> res_body_filter{{Nylon: Response Body Filter Plugin}};
+    response_body_filter-- Plugins(false) -->logging -- Plugins(false) -->endreq("request done");
+    logging -- Plugins(true) --> logging_plugin{{Nylon: Logging Plugin}};
     res_body_filter --> logging;
-    logging --> logging_plugin{{Nylon: Logging Plugin}};
     logging_plugin --> endreq("request done");
     
-    response_filter-->upstream_response_body_filter;
     upstream_response_body_filter-->response_body_filter;
-    response_body_filter-->logging-->endreq("request done");
     fail_to_connect --can retry-->upstream_peer;
     fail_to_connect --can't retry-->fail_to_proxy--send error response-->logging;
     RecvResp--failure-->IOFailure;
